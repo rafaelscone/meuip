@@ -1,0 +1,79 @@
+name: Check Configuration
+
+on:
+  # Choose the events that trigger this workflow
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  check_configurations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Check if sonar-project.properties exists
+        run: |
+          if [[ ! -f sonar-project.properties ]]; then
+            echo "❌ sonar-project.properties file is missing!"
+            exit 1
+          fi
+
+      - name: Validate sonar-project.properties structure
+        run: |
+          GITHUB_OWNER="${{ github.repository_owner }}"
+          GITHUB_REPO="${{ github.repository }}"
+          REPO_NAME="${GITHUB_REPO#*/}"  # Extract repository name
+          GITHUB_OWNER_LC=$(echo "$GITHUB_OWNER" | tr '[:upper:]' '[:lower:]')
+          GITHUB_REPO_LC=$(echo "${GITHUB_REPO#*/}" | tr '[:upper:]' '[:lower:]') # Extract repo name
+
+          if [[ ! -f sonar-project.properties ]]; then
+            echo "❌ sonar-project.properties file is missing!"
+            exit 1
+          fi
+
+          project_key=$(grep '^sonar.projectKey=' sonar-project.properties | cut -d'=' -f2)
+          organization=$(grep '^sonar.organization=' sonar-project.properties | cut -d'=' -f2)
+
+          if [[ -z "$project_key" ]]; then
+            echo "❌ sonar.projectKey is missing!"
+            exit 1
+          fi
+
+          if [[ -z "$organization" ]]; then
+            echo "❌ sonar.organization is missing!"
+            exit 1
+          fi
+
+          # Validate sonar.organization matches GitHub owner
+          if [[ "$organization" != "$GITHUB_OWNER" ]]; then
+            echo "❌ sonar.organization ($organization) does not match GitHub owner ($GITHUB_OWNER)!"
+            exit 1
+          fi
+
+          # Validate sonar.projectKey matches expected format "owner_repository"
+          EXPECTED_PROJECT_KEY="${GITHUB_OWNER}_${REPO_NAME}"
+          if [[ "$project_key" != "$EXPECTED_PROJECT_KEY" ]]; then
+            echo "❌ sonar.projectKey ($project_key) does not match expected format ($EXPECTED_PROJECT_KEY)!"
+            exit 1
+          fi
+  
+      - name: Check SONAR_TOKEN Secret
+        id: check_sonar_token
+        run: |
+          if [[ -z "${{ secrets.SONAR_TOKEN }}" ]]; then
+            echo "Missing required secret: SONAR_TOKEN"
+            exit 1
+          else
+            echo "SONAR_TOKEN is defined."
+          fi
+      
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      
+      - name: Success
+        run: echo "✅ configurations are valid!"
+      
+    
