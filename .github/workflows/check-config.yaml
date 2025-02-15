@@ -1,0 +1,11 @@
+name: Check Configurations
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run:
+    uses: rafaelscone/code-server/.github/workflows/check-config.yaml@main
+    permissions:
+      contents: write
+      id-token: write
