@@ -5,7 +5,7 @@ on:
 
 jobs:
   run:
-    uses: rafaelscone/code-server/.github/workflows/check-config.yaml@main
+    uses: rafaelscone/meuip/.github/workflows/check-sonar.yaml@main
     permissions:
       contents: write
       id-token: write
